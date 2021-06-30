@@ -1,17 +1,49 @@
-version: '2'
+version: "2"
+
+networks:
+  app-tier:
+    driver: bridge
 
 services:
   rabbitmq:
     image: docker.io/bitnami/rabbitmq:3.8
     ports:
-      - '4369:4369'
-      - '5672:5672'
-      - '25672:25672'
-      - '15672:15672'
+      - "4369:4369"
+      - "5672:5672"
+      - "25672:25672"
+      - "15672:15672"
+    networks:
+      - app-tier
     environment:
       - RABBITMQ_SECURE_PASSWORD=yes
     volumes:
-      - 'rabbitmq_data:/bitnami'
+      - "rabbitmq_data:/bitnami"
+
+  sender:
+    build:
+      context: ./sender
+    command: python send.py
+    ports:
+      - "8000:8000"
+    networks:
+      - app-tier
+    depends_on:
+      - rabbitmq
+    restart: on-failure
+
+  recver:
+    build:
+      context: ./recver
+    command: python recv.py
+    ports:
+      - "18000:18000"
+    networks:
+      - app-tier
+    depends_on:
+      - rabbitmq
+      - sender
+    restart: on-failure
+
 volumes:
   rabbitmq_data:
     driver: local
